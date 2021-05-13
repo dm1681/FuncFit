@@ -71,7 +71,7 @@ def make_dataframe(file_name: Path):
         df = pd.DataFrame()
         df['Date'] = []
         df['Exercise'] = []
-        df['Weight'] = []
+        df['Weight (lbs)'] = []
         df['Sets'] = []
         df['Reps'] = []
         df['Volume'] = []

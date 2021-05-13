@@ -40,8 +40,6 @@ app.layout = html.Div([
     dash_table.DataTable(
         id='exercise-table',
         sort_action="native",
-        row_selectable='multi',
-        row_deletable=True,
         filter_action='native',
     ),
     dcc.Store(id='exercise-data'),
@@ -119,8 +117,10 @@ def update_dataframe(col_but: int, row_but: int, data: Optional[str]):
                Output('exercise-table', 'data')],
               [Input('exercise-data', 'data')], prevent_initial_call=True)
 def update_datatable(raw_df: str):
-
     df = pd.read_json(raw_df)
+
+    if df.empty:
+        raise dash.exceptions.PreventUpdate
 
     columns = [{'name': col, 'id': col, 'renamable': True,
                 'editable': True} for col in df.columns]

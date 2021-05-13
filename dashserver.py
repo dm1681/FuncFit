@@ -14,6 +14,8 @@ from pathlib import Path
 import pdb
 import logging
 from typing import Optional
+import sys
+
 
 # third party
 import dash
@@ -25,6 +27,10 @@ import dash_table
 import pandas as pd
 
 app = Dash("Funcitonal Fitness", )
+stream_handler = logging.StreamHandler(sys.stdout)
+file_handler = logging.FileHandler(__name__+".log", mode="a+")
+logging.basicConfig(format='%(asctime)s - %(module)s.%(funcName)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG, handlers=[file_handler, stream_handler])
 logger = logging.getLogger(__file__)
 
 app.layout = html.Div([
@@ -83,25 +89,27 @@ def make_dataframe(file_name:Path):
 def update_dataframe(col_but:int, row_but:int, data:Optional[str]):
 
     ctx = dash.callback_context
+    trigger = ctx.triggered[0]['prop_id']
+    logger.info(f"Update_DataFrame triggered by {trigger}")
 
     # load in DataFrame if it doesnt already exist.
     if data is None:
-        df = make_dataframe(Path("diego.csv"))
-
+        df = make_dataframe(Path("user.csv"))
     # data already exists, load it in.
     else:
         df = pd.read_json(data) 
 
 
-
     # parse context of this callback
-    if ctx.triggered[0]['prop_id'] == 'add-column-button.n_clicks':
+    if trigger == 'add-column-button.n_clicks':
         df['New Column'] = [None] * len(df)
-    elif ctx.triggered[0]['prop_id'] == 'add-row-button.n_clicks':
+        logger.info("Added new column.")
+    elif trigger == 'add-row-button.n_clicks':
         df = df.append(pd.Series(dtype='object'), ignore_index=True)
+        logger.info("Added new row.")
     else:
-        print("idk...")
-    
+        logger.error("Triggered by unforseen context.")
+
     # send to dcc.Store as json.
     return df.to_json() 
 
@@ -110,13 +118,14 @@ def update_dataframe(col_but:int, row_but:int, data:Optional[str]):
 @app.callback([Output('exercise-table', 'columns'),
                Output('exercise-table', 'data')],
              [Input('exercise-data', 'data')], prevent_initial_call=True)
-def update_datatable(raw_df:Optional[str]):
+def update_datatable(raw_df:str):
 
     df = pd.read_json(raw_df)
 
     columns=[{'name': col , 'id':col, 'renamable':True, 'editable':True} for col in df.columns] 
     data = df.values if df.empty else df.to_dict('records')
 
+    logger.info(f"Updating datatable w/ len(col) = {len(columns)} and len(data) = {len(data)}")
 
     return columns, data
 
@@ -124,12 +133,11 @@ def update_datatable(raw_df:Optional[str]):
 @app.callback(Output('hidden-div', 'children'),
              [Input('save-button', 'n_clicks')],
              [State('exercise-table','data')], prevent_initial_call=True)
-def save_datatable(save_nClicks, data_table):
+def save_datatable(save_nClicks:int, data_table:str):
+    logger.info("Saving DataTable to file.")
     df = pd.DataFrame(data_table)
     df.to_csv(Path('user.csv'))
     return True
-
-
 
 
 app.run_server(host="0.0.0.0", port="8050", debug=True)

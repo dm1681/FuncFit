@@ -19,7 +19,7 @@ import sys
 
 # third party
 import dash
-from dash import Dash 
+from dash import Dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
@@ -36,21 +36,23 @@ logger = logging.getLogger(__file__)
 app.layout = html.Div([
     html.Button("Add Row", id='add-row-button', n_clicks=0),
     html.Button("Add Column", id='add-column-button', n_clicks=0),
-    html.Button("Save",id='save-button', n_clicks=0),
+    html.Button("Save", id='save-button', n_clicks=0),
     dash_table.DataTable(
         id='exercise-table',
         sort_action="native",
         row_selectable='multi',
         row_deletable=True,
         filter_action='native',
-        ),
+    ),
     dcc.Store(id='exercise-data'),
     html.Div(id='hidden-div', hidden=True)
 
 ])
 
 # read in file, if it doesnt exist, make it
-def make_dataframe(file_name:Path):
+
+
+def make_dataframe(file_name: Path):
     """
     Fetches the local dataframe for the user if it exists, else create a new one.
 
@@ -82,11 +84,11 @@ def make_dataframe(file_name:Path):
 
 
 # update dataframe depending on button press
-@app.callback(Output('exercise-data','data'),
+@app.callback(Output('exercise-data', 'data'),
               [Input('add-column-button', 'n_clicks'),
                Input('add-row-button', 'n_clicks')],
-              [State('exercise-data','data')])
-def update_dataframe(col_but:int, row_but:int, data:Optional[str]):
+              [State('exercise-data', 'data')])
+def update_dataframe(col_but: int, row_but: int, data: Optional[str]):
 
     ctx = dash.callback_context
     trigger = ctx.triggered[0]['prop_id']
@@ -97,8 +99,7 @@ def update_dataframe(col_but:int, row_but:int, data:Optional[str]):
         df = make_dataframe(Path("user.csv"))
     # data already exists, load it in.
     else:
-        df = pd.read_json(data) 
-
+        df = pd.read_json(data)
 
     # parse context of this callback
     if trigger == 'add-column-button.n_clicks':
@@ -111,29 +112,30 @@ def update_dataframe(col_but:int, row_but:int, data:Optional[str]):
         logger.error("Triggered by unforseen context.")
 
     # send to dcc.Store as json.
-    return df.to_json() 
-
+    return df.to_json()
 
 
 @app.callback([Output('exercise-table', 'columns'),
                Output('exercise-table', 'data')],
-             [Input('exercise-data', 'data')], prevent_initial_call=True)
-def update_datatable(raw_df:str):
+              [Input('exercise-data', 'data')], prevent_initial_call=True)
+def update_datatable(raw_df: str):
 
     df = pd.read_json(raw_df)
 
-    columns=[{'name': col , 'id':col, 'renamable':True, 'editable':True} for col in df.columns] 
+    columns = [{'name': col, 'id': col, 'renamable': True,
+                'editable': True} for col in df.columns]
     data = df.values if df.empty else df.to_dict('records')
 
-    logger.info(f"Updating datatable w/ len(col) = {len(columns)} and len(data) = {len(data)}")
+    logger.info(
+        f"Updating datatable w/ len(col) = {len(columns)} and len(data) = {len(data)}")
 
     return columns, data
 
 
 @app.callback(Output('hidden-div', 'children'),
-             [Input('save-button', 'n_clicks')],
-             [State('exercise-table','data')], prevent_initial_call=True)
-def save_datatable(save_nClicks:int, data_table:str):
+              [Input('save-button', 'n_clicks')],
+              [State('exercise-table', 'data')], prevent_initial_call=True)
+def save_datatable(save_nClicks: int, data_table: str):
     logger.info("Saving DataTable to file.")
     df = pd.DataFrame(data_table)
     df.to_csv(Path('user.csv'))
